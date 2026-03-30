@@ -1,0 +1,23 @@
+model Grupo {
+  id            String         @id @default(uuid()) @db.Uuid
+  nombre        String
+  descripcion   String?
+  creadorId     String         @db.Uuid @map("creador_id")
+  nivel         String?
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+  miembros      GrupoMiembro[]
+
+  @@map("grupos")
+}
+
+model GrupoMiembro {
+  id         String   @id @default(uuid()) @db.Uuid
+  grupoId    String   @db.Uuid @map("grupo_id")
+  usuarioId  String   @db.Uuid @map("usuario_id")
+  fechaUnido DateTime @default(now()) @map("fecha_unido")
+  grupo      Grupo    @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+
+  @@unique([grupoId, usuarioId])
+  @@map("grupo_miembros")
+}

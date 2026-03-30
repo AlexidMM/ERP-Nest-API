@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id               String         @id @default(uuid()) @db.Uuid
+  usuario          String         @unique
+  email            String         @unique
+  passwordHash     String         @map("password_hash")
+  nombreCompleto   String?        @map("nombre_completo")
+  direccion        String?
+  telefono         String?
+  fechaNacimiento  DateTime       @db.Date @map("fecha_nacimiento")
+  permisosGlobales String[]       @default([]) @map("permisos_globales")
+  ultimoLogin      DateTime?      @map("ultimo_login")
+  creadoEn         DateTime       @default(now()) @map("creado_en")
+  actualizadoEn    DateTime       @updatedAt @map("actualizado_en")
+  posts            Post[]
+  grupoMiembros    GrupoMiembro[]
+
+  @@map("usuarios")
+}
+
+model Post {
+  id            String    @id @default(uuid()) @db.Uuid
+  titulo        String
+  contenido     String
+  resumen       String?
+  autorId       String    @db.Uuid @map("autor_id")
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+  autor         Usuario   @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@map("posts")
+}
+
+model Grupo {
+  id            String         @id @default(uuid()) @db.Uuid
+  nombre        String
+  descripcion   String?
+  creadorId     String         @db.Uuid @map("creador_id")
+  nivel         String?
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+  miembros      GrupoMiembro[]
+
+  @@map("grupos")
+}
+
+model GrupoMiembro {
+  id         String   @id @default(uuid()) @db.Uuid
+  grupoId    String   @db.Uuid @map("grupo_id")
+  usuarioId  String   @db.Uuid @map("usuario_id")
+  fechaUnido DateTime @default(now()) @map("fecha_unido")
+  grupo      Grupo    @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([grupoId, usuarioId])
+  @@map("grupo_miembros")
+}

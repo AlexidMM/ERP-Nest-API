@@ -1,0 +1,76 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { LoginDto } from '../common/dtos/login.dto';
+import { RegisterDto } from '../common/dtos/register.dto';
+import { UsersService } from '../users/users.service';
+
+@Injectable()
+export class AuthService {
+	constructor(
+		private readonly usersService: UsersService,
+		private readonly jwtService: JwtService,
+	) {}
+
+	async register(dto: RegisterDto) {
+		const user = await this.usersService.createUser({
+			...dto,
+			permisosGlobales: [],
+		});
+
+		const accessToken = await this.signToken(user.id, user.email, user.usuario);
+
+		return {
+			accessToken,
+			user,
+		};
+	}
+
+	async login(dto: LoginDto) {
+		const user = await this.usersService.findByEmail(dto.email);
+		if (!user) {
+			throw new UnauthorizedException('Credenciales invalidas');
+		}
+
+		const userId = String(user.id ?? '');
+		const userEmail = String(user.email ?? '');
+		const username = String(user.usuario ?? user.username ?? '');
+
+		const storedPasswordHash =
+			typeof user.passwordHash === 'string'
+				? user.passwordHash
+				: typeof user.password === 'string'
+					? user.password
+					: '';
+
+		const isPasswordValid = await bcrypt.compare(dto.password, storedPasswordHash);
+		if (!isPasswordValid) {
+			throw new UnauthorizedException('Credenciales invalidas');
+		}
+
+		await this.usersService.touchLastLogin(userId);
+
+		const accessToken = await this.signToken(userId, userEmail, username);
+
+		return {
+			accessToken,
+			user: this.usersService.toPublicUser({
+				...user,
+				ultimoLogin: new Date(),
+			}),
+		};
+	}
+
+	async validateUser(userId: string) {
+		const user = await this.usersService.findById(userId);
+		if (!user) {
+			throw new UnauthorizedException('Usuario no encontrado');
+		}
+
+		return this.usersService.toPublicUser(user);
+	}
+
+	private async signToken(sub: string, email: string, usuario: string): Promise<string> {
+		return this.jwtService.signAsync({ sub, email, usuario });
+	}
+}
