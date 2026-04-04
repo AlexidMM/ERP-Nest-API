@@ -13,7 +13,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 		});
 	}
 
-	async validate(payload: { sub: string }) {
-		return this.authService.validateUser(payload.sub);
+	async validate(payload: { sub: string; email?: string; usuario?: string; permisosGlobales?: string[] }) {
+		const user = await this.authService.validateUser(payload.sub);
+		if (user) {
+			// Enrich user context with permissions from payload or from service
+			user.permisosGlobales = payload.permisosGlobales ?? user.permisosGlobales ?? [];
+		}
+		return user;
 	}
 }

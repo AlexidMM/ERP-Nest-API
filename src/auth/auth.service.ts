@@ -18,7 +18,7 @@ export class AuthService {
 			permisosGlobales: [],
 		});
 
-		const accessToken = await this.signToken(user.id, user.email, user.usuario);
+		const accessToken = await this.signToken(user.id, user.email, user.usuario, user.permisosGlobales);
 
 		return {
 			accessToken,
@@ -35,6 +35,7 @@ export class AuthService {
 		const userId = String(user.id ?? '');
 		const userEmail = String(user.email ?? '');
 		const username = String(user.usuario ?? user.username ?? '');
+		const permisosGlobales = Array.isArray(user.permisosGlobales) ? user.permisosGlobales : [];
 
 		const storedPasswordHash =
 			typeof user.passwordHash === 'string'
@@ -58,7 +59,7 @@ export class AuthService {
 
 		await this.usersService.touchLastLogin(userId);
 
-		const accessToken = await this.signToken(userId, userEmail, username);
+		const accessToken = await this.signToken(userId, userEmail, username, permisosGlobales);
 
 		return {
 			accessToken,
@@ -78,7 +79,30 @@ export class AuthService {
 		return this.usersService.toPublicUser(user);
 	}
 
-	private async signToken(sub: string, email: string, usuario: string): Promise<string> {
-		return this.jwtService.signAsync({ sub, email, usuario });
+	async logout() {
+		// Token stateless: logout es efectivo cuando frontend borra el token
+		return {
+			message: 'Sesion cerrada correctamente',
+		};
+	}
+
+	async refreshToken(userId: string) {
+		const user = await this.usersService.findById(userId);
+		if (!user) {
+			throw new UnauthorizedException('Usuario no encontrado');
+		}
+
+		const userEmail = String(user.email ?? '');
+		const username = String(user.usuario ?? user.username ?? '');
+		const permisosGlobales = Array.isArray(user.permisosGlobales) ? user.permisosGlobales : [];
+		const accessToken = await this.signToken(userId, userEmail, username, permisosGlobales);
+
+		return {
+			accessToken,
+		};
+	}
+
+	private async signToken(sub: string, email: string, usuario: string, permisosGlobales: string[] = []): Promise<string> {
+		return this.jwtService.signAsync({ sub, email, usuario, permisosGlobales });
 	}
 }

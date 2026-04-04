@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from '../common/dtos/create-user.dto';
@@ -94,6 +94,15 @@ export class UsersService {
 		return users.findUnique({ where: { id: userId } });
 	}
 
+	async findPublicById(userId: string): Promise<PublicUser> {
+		const user = await this.findById(userId);
+		if (!user) {
+			throw new NotFoundException('Usuario no encontrado');
+		}
+
+		return this.toPublicUser(user);
+	}
+
 	async findAll(): Promise<PublicUser[]> {
 		const users = this.getUserDelegate();
 		const allUsers = await (users as unknown as { findMany: (args: unknown) => Promise<Record<string, unknown>[]> }).findMany?.({}) ?? [];
@@ -114,6 +123,54 @@ export class UsersService {
 			where: { id: userId },
 			data: { passwordHash },
 		});
+	}
+
+	async updateProfile(userId: string, updates: Record<string, unknown>): Promise<PublicUser> {
+		const users = this.getUserDelegate();
+		const dataToUpdate: Record<string, unknown> = { actualizadoEn: new Date() };
+
+		if (updates.nombreCompleto) {
+			dataToUpdate.nombreCompleto = String(updates.nombreCompleto).trim();
+		}
+		if (updates.direccion) {
+			dataToUpdate.direccion = String(updates.direccion).trim();
+		}
+		if (updates.telefono) {
+			dataToUpdate.telefono = String(updates.telefono).trim();
+		}
+
+		const updated = await users.update({
+			where: { id: userId },
+			data: dataToUpdate,
+		});
+
+		return this.toPublicUser(updated);
+	}
+
+	async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+		const user = await this.findById(userId);
+		if (!user) {
+			throw new NotFoundException('Usuario no encontrado');
+		}
+
+		const storedPasswordHash =
+			typeof user.passwordHash === 'string'
+				? user.passwordHash
+				: typeof user.password === 'string'
+					? user.password
+					: '';
+
+		const looksHashed = storedPasswordHash.startsWith('$2a$') || storedPasswordHash.startsWith('$2b$') || storedPasswordHash.startsWith('$2y$');
+		const isCurrentPasswordValid = looksHashed
+			? await bcrypt.compare(currentPassword, storedPasswordHash)
+			: currentPassword === storedPasswordHash;
+
+		if (!isCurrentPasswordValid) {
+			throw new BadRequestException('La contraseña actual es incorrecta');
+		}
+
+		const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+		await this.updatePasswordHash(userId, hashedNewPassword);
 	}
 
 	toPublicUser(user: Record<string, unknown>): PublicUser {
