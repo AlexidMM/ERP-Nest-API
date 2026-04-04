@@ -43,9 +43,17 @@ export class AuthService {
 					? user.password
 					: '';
 
-		const isPasswordValid = await bcrypt.compare(dto.password, storedPasswordHash);
+		const looksHashed = storedPasswordHash.startsWith('$2a$') || storedPasswordHash.startsWith('$2b$') || storedPasswordHash.startsWith('$2y$');
+		const isPasswordValid = looksHashed
+			? await bcrypt.compare(dto.password, storedPasswordHash)
+			: dto.password === storedPasswordHash;
 		if (!isPasswordValid) {
 			throw new UnauthorizedException('Credenciales invalidas');
+		}
+
+		if (!looksHashed && storedPasswordHash) {
+			const migratedHash = await bcrypt.hash(dto.password, 10);
+			await this.usersService.updatePasswordHash(userId, migratedHash);
 		}
 
 		await this.usersService.touchLastLogin(userId);

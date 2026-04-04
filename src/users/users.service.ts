@@ -94,11 +94,25 @@ export class UsersService {
 		return users.findUnique({ where: { id: userId } });
 	}
 
+	async findAll(): Promise<PublicUser[]> {
+		const users = this.getUserDelegate();
+		const allUsers = await (users as unknown as { findMany: (args: unknown) => Promise<Record<string, unknown>[]> }).findMany?.({}) ?? [];
+		return allUsers.map((user) => this.toPublicUser(user));
+	}
+
 	async touchLastLogin(userId: string): Promise<void> {
 		const users = this.getUserDelegate();
 		await users.update({
 			where: { id: userId },
 			data: { ultimoLogin: new Date() },
+		});
+	}
+
+	async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+		const users = this.getUserDelegate();
+		await users.update({
+			where: { id: userId },
+			data: { passwordHash },
 		});
 	}
 

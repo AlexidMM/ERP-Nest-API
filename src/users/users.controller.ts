@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from '../common/dtos/create-user.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -12,8 +12,16 @@ export class UsersController {
 	@Post()
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth()
-	@ApiOperation({ summary: 'Agregar un usuario (ruta protegida con JWT)' })
+	@ApiOperation({ summary: 'Crear un usuario (ruta protegida con JWT)' })
 	create(@Body() dto: CreateUserDto) {
 		return this.usersService.createUser(dto);
+	}
+
+	@Get()
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Listar todos los usuarios' })
+	async findAll() {
+		return this.usersService.findAll();
 	}
 }
