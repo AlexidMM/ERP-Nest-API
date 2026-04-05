@@ -18,11 +18,15 @@ export class AuthService {
 			permisosGlobales: [],
 		});
 
-		const accessToken = await this.signToken(user.id, user.email, user.usuario, user.permisosGlobales);
+		const effectivePermissions = await this.usersService.findEffectivePermissions(user.id);
+		const accessToken = await this.signToken(user.id, user.email, user.usuario, effectivePermissions);
 
 		return {
 			accessToken,
-			user,
+			user: {
+				...user,
+				permisosGlobales: effectivePermissions,
+			},
 		};
 	}
 
@@ -40,7 +44,7 @@ export class AuthService {
 		const userId = String(user.id ?? '');
 		const userEmail = String(user.email ?? '');
 		const username = String(user.usuario ?? user.username ?? '');
-		const permisosGlobales = Array.isArray(user.permisosGlobales) ? user.permisosGlobales : [];
+		const effectivePermissions = await this.usersService.findEffectivePermissions(userId);
 
 		const storedPasswordHash =
 			typeof user.passwordHash === 'string'
@@ -66,14 +70,17 @@ export class AuthService {
 
 		await this.usersService.touchLastLogin(userId);
 
-		const accessToken = await this.signToken(userId, userEmail, username, permisosGlobales);
+		const accessToken = await this.signToken(userId, userEmail, username, effectivePermissions);
 
 		return {
 			accessToken,
-			user: this.usersService.toPublicUser({
+			user: {
+				...this.usersService.toPublicUser({
 				...user,
 				ultimoLogin: new Date(),
-			}),
+				}),
+				permisosGlobales: effectivePermissions,
+			},
 		};
 	}
 
@@ -111,8 +118,8 @@ export class AuthService {
 
 		const userEmail = String(user.email ?? '');
 		const username = String(user.usuario ?? user.username ?? '');
-		const permisosGlobales = Array.isArray(user.permisosGlobales) ? user.permisosGlobales : [];
-		const accessToken = await this.signToken(userId, userEmail, username, permisosGlobales);
+		const effectivePermissions = await this.usersService.findEffectivePermissions(userId);
+		const accessToken = await this.signToken(userId, userEmail, username, effectivePermissions);
 
 		return {
 			accessToken,

@@ -332,11 +332,16 @@ export class UsersService {
 	}
 
 	toPublicUser(user: Record<string, unknown>): PublicUser {
+		const rawGlobalPermissions =
+			(user.permisosGlobales as string[] | undefined) ??
+			(user.permisos_globales as string[] | undefined) ??
+			[];
+
 		return {
 			id: String(user.id),
 			usuario: String(user.usuario ?? user.username ?? ''),
 			email: String(user.email ?? ''),
-			nombreCompleto: String(user.nombreCompleto ?? user.fullName ?? ''),
+			nombreCompleto: String(user.nombreCompleto ?? user.nombre_completo ?? user.fullName ?? ''),
 			direccion:
 				(user.direccion as string | null | undefined) ??
 				(user.direccion_text as string | null | undefined) ??
@@ -351,7 +356,7 @@ export class UsersService {
 				(user.fecha_nacimiento as Date | undefined) ??
 				(user.birthDate as Date | undefined) ??
 				new Date('1970-01-01'),
-			permisosGlobales: (user.permisosGlobales as string[] | undefined) ?? [],
+			permisosGlobales: Array.isArray(rawGlobalPermissions) ? rawGlobalPermissions : [],
 			ultimoLogin:
 				(user.ultimoLogin as Date | null | undefined) ??
 				(user.ultimo_login as Date | null | undefined) ??
