@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from '../common/dtos/create-user.dto';
 import { UpdateProfileDto } from '../common/dtos/update-profile.dto';
 import { ChangePasswordDto } from '../common/dtos/change-password.dto';
+import { UpdateUserDto } from '../common/dtos/update-user.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UsersService } from './users.service';
 
@@ -35,15 +36,35 @@ export class UsersController {
 		return this.usersService.findPublicById(id);
 	}
 
+	@Put(':id')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Actualizar usuario por id' })
+	async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+		return this.usersService.updateUser(id, dto as Record<string, unknown>);
+	}
+
+	@Delete(':id')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Eliminar usuario por id' })
+	async remove(@Param('id') id: string) {
+		await this.usersService.deleteUser(id);
+		return {
+			message: 'Usuario eliminado correctamente',
+		};
+	}
+
 	@Get(':id/permissions')
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth()
-	@ApiOperation({ summary: 'Obtener permisos globales del usuario' })
+	@ApiOperation({ summary: 'Obtener permisos efectivos del usuario (globales + grupos)' })
 	async permissions(@Param('id') id: string) {
 		const user = await this.usersService.findPublicById(id);
+		const effectivePermissions = await this.usersService.findEffectivePermissions(id);
 		return {
 			usuarioId: user.id,
-			permisosGlobales: user.permisosGlobales,
+			permisosGlobales: effectivePermissions,
 		};
 	}
 

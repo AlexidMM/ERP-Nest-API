@@ -32,6 +32,11 @@ export class AuthService {
 			throw new UnauthorizedException('Credenciales invalidas');
 		}
 
+		const userStatus = String(user.status ?? 'activo').trim().toLowerCase();
+		if (userStatus === 'desactivado') {
+			throw new UnauthorizedException('Tu cuenta se encuentra desactivada');
+		}
+
 		const userId = String(user.id ?? '');
 		const userEmail = String(user.email ?? '');
 		const username = String(user.usuario ?? user.username ?? '');
@@ -40,6 +45,8 @@ export class AuthService {
 		const storedPasswordHash =
 			typeof user.passwordHash === 'string'
 				? user.passwordHash
+				: typeof user.password_hash === 'string'
+					? user.password_hash
 				: typeof user.password === 'string'
 					? user.password
 					: '';
@@ -76,6 +83,11 @@ export class AuthService {
 			throw new UnauthorizedException('Usuario no encontrado');
 		}
 
+		const userStatus = String(user.status ?? 'activo').trim().toLowerCase();
+		if (userStatus === 'desactivado') {
+			throw new UnauthorizedException('Tu cuenta se encuentra desactivada');
+		}
+
 		return this.usersService.toPublicUser(user);
 	}
 
@@ -90,6 +102,11 @@ export class AuthService {
 		const user = await this.usersService.findById(userId);
 		if (!user) {
 			throw new UnauthorizedException('Usuario no encontrado');
+		}
+
+		const userStatus = String(user.status ?? 'activo').trim().toLowerCase();
+		if (userStatus === 'desactivado') {
+			throw new UnauthorizedException('Tu cuenta se encuentra desactivada');
 		}
 
 		const userEmail = String(user.email ?? '');
