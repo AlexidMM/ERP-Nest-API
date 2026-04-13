@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from '../common/dtos/create-user.dto';
 import { UpdateProfileDto } from '../common/dtos/update-profile.dto';
@@ -32,40 +32,8 @@ export class UsersController {
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth()
 	@ApiOperation({ summary: 'Obtener usuario por id' })
-	async findOne(@Param('id') id: string) {
+	async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
 		return this.usersService.findPublicById(id);
-	}
-
-	@Put(':id')
-	@UseGuards(JwtAuthGuard)
-	@ApiBearerAuth()
-	@ApiOperation({ summary: 'Actualizar usuario por id' })
-	async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-		return this.usersService.updateUser(id, dto as Record<string, unknown>);
-	}
-
-	@Delete(':id')
-	@UseGuards(JwtAuthGuard)
-	@ApiBearerAuth()
-	@ApiOperation({ summary: 'Eliminar usuario por id' })
-	async remove(@Param('id') id: string) {
-		await this.usersService.deleteUser(id);
-		return {
-			message: 'Usuario eliminado correctamente',
-		};
-	}
-
-	@Get(':id/permissions')
-	@UseGuards(JwtAuthGuard)
-	@ApiBearerAuth()
-	@ApiOperation({ summary: 'Obtener permisos efectivos del usuario (globales + grupos)' })
-	async permissions(@Param('id') id: string) {
-		const user = await this.usersService.findPublicById(id);
-		const effectivePermissions = await this.usersService.findEffectivePermissions(id);
-		return {
-			usuarioId: user.id,
-			permisosGlobales: effectivePermissions,
-		};
 	}
 
 	@Put('me')
@@ -86,6 +54,38 @@ export class UsersController {
 		await this.usersService.changePassword(userId, dto.currentPassword, dto.newPassword);
 		return {
 			message: 'Contraseña actualizada correctamente',
+		};
+	}
+
+	@Put(':id')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Actualizar usuario por id' })
+	async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateUserDto) {
+		return this.usersService.updateUser(id, dto as Record<string, unknown>);
+	}
+
+	@Delete(':id')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Eliminar usuario por id' })
+	async remove(@Param('id', new ParseUUIDPipe()) id: string) {
+		await this.usersService.deleteUser(id);
+		return {
+			message: 'Usuario eliminado correctamente',
+		};
+	}
+
+	@Get(':id/permissions')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: 'Obtener permisos efectivos del usuario (globales + grupos)' })
+	async permissions(@Param('id', new ParseUUIDPipe()) id: string) {
+		const user = await this.usersService.findPublicById(id);
+		const effectivePermissions = await this.usersService.findEffectivePermissions(id);
+		return {
+			usuarioId: user.id,
+			permisosGlobales: effectivePermissions,
 		};
 	}
 }
